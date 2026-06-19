@@ -6,8 +6,7 @@
 
 This contains everything you need to run your app locally.
 
-View your app in AI Studio: https://ai.studio/apps/da62f36e-958e-4fdc-8a13-269e3b348133
-
+View your app in AI Studio: https://smart-inventory-dashboard-806854187657.asia-southeast1.run.app
 ## Run Locally
 
 **Prerequisites:**  Node.js
