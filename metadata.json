@@ -1,0 +1,6 @@
+{
+  "name": "Smart Inventory Dashboard",
+  "description": "AI-powered inventory management, checkout billing system, sales trends, supplier tracking, and predictive demand forecasting for local shopkeepers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
