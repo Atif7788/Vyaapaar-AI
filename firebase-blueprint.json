@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/firebase-blueprint.json",
+  "collections": {
+    "users": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "businessName": { "type": "string" },
+          "createdAt": { "type": "string" }
+        }
+      }
+    }
+  }
+}

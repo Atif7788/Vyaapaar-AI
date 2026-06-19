@@ -31,6 +31,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { SaleTransaction, Product } from "../types";
+import { generateAndDownloadInvoicePDF } from "../utils/pdfGenerator";
 
 interface AnalyticsViewProps {
   sales: SaleTransaction[];
@@ -318,6 +319,7 @@ export default function AnalyticsView({ sales, products }: AnalyticsViewProps) {
                 <th className="py-2.5 px-3">Applied Discount</th>
                 <th className="py-2.5 px-3">Unified GST Tax</th>
                 <th className="py-2.5 px-4 text-right pr-4 font-semibold">Total Payable</th>
+                <th className="py-2.5 px-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -344,11 +346,21 @@ export default function AnalyticsView({ sales, products }: AnalyticsViewProps) {
                     <td className="py-2.5 px-3 font-mono text-rose-500 font-semibold">-₹{tx.discountAmount.toFixed(0)}</td>
                     <td className="py-2.5 px-3 font-mono font-medium text-slate-500">₹{tx.gstAmount.toFixed(0)}</td>
                     <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900 pr-4">₹{tx.totalAmount.toLocaleString("en-IN")}</td>
+                    <td className="py-2.5 px-4 text-center">
+                      <button
+                        onClick={() => generateAndDownloadInvoicePDF(tx)}
+                        title="Download PDF Invoice"
+                        className="p-1.5 bg-blue-50 hover:bg-blue-100 transition text-blue-600 rounded-md inline-flex items-center justify-center gap-1 cursor-pointer font-bold text-[10px]"
+                      >
+                        <Download className="w-3 h-3" />
+                        PDF
+                      </button>
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 italic bg-slate-50">
+                  <td colSpan={8} className="py-12 text-center text-slate-400 italic bg-slate-50">
                     No transactions match current filters. Check date range.
                   </td>
                 </tr>

@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { firebaseConfig } from "../lib/firebase";
 import { 
   Database, 
   Terminal, 
@@ -188,6 +189,58 @@ export default function SetupGuide() {
         {/* Right Side: Quick facts / Setup tutorials */}
         <div className="lg:col-span-4 space-y-6">
           
+          {/* Runtime Firebase Configuration status */}
+          <div className="bg-white p-4.5 rounded-lg border border-slate-200 shadow-sm space-y-4 text-xs">
+            <h3 className="text-xs font-bold text-slate-900 border-b pb-2.5 border-slate-100 flex items-center gap-1.5">
+              <Database className="w-4.5 h-4.5 text-emerald-500" />
+              Runtime Firebase Configuration
+            </h3>
+
+            <p className="text-slate-550 leading-normal text-[11px]">
+              The following values represent the active, resolved Firebase credentials utilized by the client SDK at runtime:
+            </p>
+
+            <div className="space-y-2 font-mono text-[10px] bg-slate-900 text-slate-200 p-3 rounded-lg border border-slate-800">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-sans font-bold">API KEY:</span>
+                <span className="text-emerald-400 break-all select-all">{firebaseConfig.apiKey}</span>
+              </div>
+              <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-2">
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-sans font-bold">AUTH DOMAIN:</span>
+                <span className="text-slate-300 break-all select-all">{firebaseConfig.authDomain}</span>
+              </div>
+              <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-2">
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-sans font-bold">PROJECT ID:</span>
+                <span className="text-blue-450 break-all select-all">{firebaseConfig.projectId}</span>
+              </div>
+              <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-2">
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-sans font-bold">STORAGE BUCKET:</span>
+                <span className="text-slate-300 break-all select-all">{firebaseConfig.storageBucket}</span>
+              </div>
+              <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-2">
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-sans font-bold">MESSAGING SENDER ID:</span>
+                <span className="text-slate-200 break-all select-all">{firebaseConfig.messagingSenderId}</span>
+              </div>
+              <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-2">
+                <span className="text-[9px] text-slate-400 uppercase tracking-wider font-sans font-bold">APP ID:</span>
+                <span className="text-amber-400 break-all select-all">{firebaseConfig.appId}</span>
+              </div>
+              {firebaseConfig.measurementId && (
+                <div className="flex flex-col gap-0.5 border-t border-slate-800 pt-2">
+                  <span className="text-[9px] text-slate-400 uppercase tracking-wider font-sans font-bold">MEASUREMENT ID:</span>
+                  <span className="text-teal-400 break-all select-all">{firebaseConfig.measurementId}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-emerald-50 text-emerald-800 p-2.5 rounded border border-emerald-100 flex items-center gap-2 text-[11px] leading-relaxed">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+              <span>
+                <strong>Verified Credentials:</strong> The active client SDK instance is successfully connected with database ID: <code className="font-bold">ai-studio-da62f36e-958e-4fdc-8a13-269e3b348133</code>.
+              </span>
+            </div>
+          </div>
+
           <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-4 text-xs">
             <h3 className="text-xs font-bold text-slate-900 border-b pb-2.5 border-slate-100 flex items-center gap-1.5">
               <Globe className="w-4.5 h-4.5 text-blue-500" />

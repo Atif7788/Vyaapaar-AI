@@ -30,13 +30,14 @@ import {
   CartesianGrid, 
   Legend 
 } from "recharts";
-import { Product, DemandForecast, AISmartInsight } from "../types";
+import { Product, DemandForecast, AISmartInsight, SaleTransaction } from "../types";
 
 interface ForecastingViewProps {
   products: Product[];
+  sales: SaleTransaction[];
 }
 
-export default function ForecastingView({ products }: ForecastingViewProps) {
+export default function ForecastingView({ products, sales }: ForecastingViewProps) {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [forecast, setForecast] = useState<DemandForecast | null>(null);
   const [insights, setInsights] = useState<AISmartInsight[]>([]);
@@ -57,7 +58,11 @@ export default function ForecastingView({ products }: ForecastingViewProps) {
     if (!productId) return;
     setIsForecastLoading(true);
     try {
-      const res = await fetch(`/api/forecasts?productId=${productId}`);
+      const res = await fetch(`/api/forecasts?productId=${productId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ products, sales, productId })
+      });
       if (!res.ok) throw new Error("Forecast API error");
       const data = await res.json();
       setForecast(data);
@@ -72,7 +77,11 @@ export default function ForecastingView({ products }: ForecastingViewProps) {
   const fetchSmartInsights = async () => {
     setIsInsightsLoading(true);
     try {
-      const res = await fetch("/api/ai-insights");
+      const res = await fetch("/api/ai-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ products, sales })
+      });
       if (!res.ok) throw new Error("Insights API error");
       const data = await res.json();
       setInsights(data);

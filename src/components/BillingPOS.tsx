@@ -22,6 +22,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { Product, SaleItem } from "../types";
+import { generateAndDownloadInvoicePDF } from "../utils/pdfGenerator";
 
 interface BillingPOSProps {
   products: Product[];
@@ -183,6 +184,13 @@ export default function BillingPOS({ products, onCheckOut }: BillingPOSProps) {
 
       const result = await onCheckOut(payload);
       setReceiptInvoice(result);
+      
+      // Automatic PDF generate/download
+      try {
+        generateAndDownloadInvoicePDF(result);
+      } catch (pdfErr) {
+        console.error("Auto PDF generation error:", pdfErr);
+      }
       
       // Clear POS Screen
       setCart([]);
@@ -575,19 +583,30 @@ export default function BillingPOS({ products, onCheckOut }: BillingPOSProps) {
             </div>
 
             {/* Actions */}
-            <div className="flex gap-2 text-xs pt-1">
+            <div className="flex flex-col gap-2 pt-1 text-xs">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => generateAndDownloadInvoicePDF(receiptInvoice)}
+                  className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 transition font-bold text-white rounded flex items-center justify-center gap-1.5 shadow shadow-blue-500/10 cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  Redownload PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={printDocumentView}
+                  className="flex-1 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 transition font-bold rounded flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  Thermal Print
+                </button>
+              </div>
               <button
+                type="button"
                 onClick={() => setReceiptInvoice(null)}
-                className="flex-1 py-1.5 border border-slate-200 hover:bg-slate-50 transition font-bold rounded"
+                className="w-full py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-500 hover:text-slate-700 font-medium transition rounded cursor-pointer"
               >
                 Close Ticket
-              </button>
-              <button
-                onClick={printDocumentView}
-                className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 transition font-bold text-white rounded flex items-center justify-center gap-1.5 shadow shadow-blue-500/10 cursor-pointer"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                Print Invoice
               </button>
             </div>
 

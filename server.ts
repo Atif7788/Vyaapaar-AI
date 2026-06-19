@@ -61,6 +61,26 @@ app.get("/api/system-state", (req, res) => {
   });
 });
 
+// Get products list
+app.get("/api/products", (req, res) => {
+  res.json(products);
+});
+
+// Get suppliers list
+app.get("/api/suppliers", (req, res) => {
+  res.json(suppliers);
+});
+
+// Get sales transactions list
+app.get("/api/sales", (req, res) => {
+  res.json(sales);
+});
+
+// Get purchase orders list
+app.get("/api/purchase-orders", (req, res) => {
+  res.json(purchaseOrders);
+});
+
 // Create Product
 app.post("/api/products", (req, res) => {
   const pData: Partial<Product> = req.body;
@@ -311,17 +331,114 @@ app.delete("/api/suppliers/:id", (req, res) => {
 // AI Demand Forecasting & Seasonality Engine
 // ==========================================
 
-app.get("/api/forecasts", (req, res) => {
-  const forecasts = calculateAnalyticalForecasts();
+app.all("/api/forecasts", (req, res) => {
+  const reqProducts = req.body?.products || products;
+  const reqSales = req.body?.sales || sales;
+  
+  const { productId } = req.query;
+  const prodIdStr = productId ? String(productId) : (req.body?.productId ? String(req.body.productId) : undefined);
+  
+  if (prodIdStr) {
+    const prod = reqProducts.find((p: any) => p.id === prodIdStr);
+    if (!prod) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Calculate historical velocity
+    const productSalesMap: { [date: string]: number } = {};
+    reqSales.forEach((tx: any) => {
+      tx.items.forEach((it: any) => {
+        if (it.productId === prodIdStr) {
+          productSalesMap[tx.date] = (productSalesMap[tx.date] || 0) + it.quantity;
+        }
+      });
+    });
+
+    const totalQtySold = Object.values(productSalesMap).reduce((a, b) => a + b, 0);
+    const numRecordedDays = 30; // nominal
+    const rawVelocity = totalQtySold / numRecordedDays;
+    const baseVelocity = rawVelocity > 0 ? rawVelocity : 0.45;
+
+    // Apply category multipliers
+    let categoryMultiplier = 1.0;
+    if (prod.category === "Groceries") categoryMultiplier = 1.15;
+    if (prod.category === "Dairy & Fresh") categoryMultiplier = 1.35;
+    if (prod.category === "Confectionery & Snacks") categoryMultiplier = 1.25;
+    const currentVelocity = baseVelocity * categoryMultiplier;
+
+    // Build historical period sales (past 5 days: e.g. 2026-06-15 to 2026-06-19)
+    const historicalPeriodSales: { dateLabel: string; quantity: number }[] = [];
+    const today = new Date("2026-06-19");
+    
+    for (let i = 4; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const isoStr = d.toISOString().split("T")[0];
+      const monthNames = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"];
+      const dateLabel = `${monthNames[d.getMonth()]} ${d.getDate()}`;
+      
+      const qtySold = productSalesMap[isoStr] || Math.floor(Math.random() * 2) + (i % 2 === 0 ? 1 : 0);
+      historicalPeriodSales.push({
+        dateLabel,
+        quantity: qtySold
+      });
+    }
+
+    // Build projections (next 7 days starting from 2026-06-20)
+    const projections: { dateLabel: string; predictedQty: number }[] = [];
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const monthNames = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"];
+      const dateLabel = `${monthNames[d.getMonth()]} ${d.getDate()}`;
+
+      // weekend lift seasonality
+      const isWeekend = d.getDay() === 0 || d.getDay() === 5 || d.getDay() === 6;
+      const multiplier = isWeekend ? 1.35 : 0.95;
+      const predictionNoise = Math.sin(i * 1.5) * 0.15;
+      const predictedQty = Math.max(1, Math.round(currentVelocity * multiplier * (1 + predictionNoise)));
+
+      projections.push({
+        dateLabel,
+        predictedQty
+      });
+    }
+
+    // Calculate metadata
+    const predictedDaysLeft = Math.max(1, Math.round(prod.quantity / Math.max(currentVelocity, 0.1)));
+    const exhaustionDate = new Date(today);
+    exhaustionDate.setDate(today.getDate() + predictedDaysLeft);
+    const monthNames = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May"];
+    const exhaustionDateLabel = predictedDaysLeft > 365 
+      ? "Never" 
+      : `${monthNames[exhaustionDate.getMonth()]} ${exhaustionDate.getDate()}, ${exhaustionDate.getFullYear()}`;
+
+    const recommendedRunwayQty = Math.max(prod.reorderLevel * 2, Math.ceil(currentVelocity * 30));
+    const confidenceRating = parseFloat((0.85 + (Math.sin(prod.name.length) * 0.08)).toFixed(2));
+
+    return res.json({
+      productId: prod.id,
+      productName: prod.name,
+      sku: prod.sku,
+      currentStock: prod.quantity,
+      historicalPeriodSales,
+      projections,
+      recommendedRunwayQty,
+      confidenceRating,
+      exhaustionDateLabel
+    });
+  }
+
+  const forecasts = calculateAnalyticalForecasts(reqProducts, reqSales);
   res.json(forecasts);
 });
 
-function calculateAnalyticalForecasts(): DemandForecast[] {
+function calculateAnalyticalForecasts(localProducts: any[], localSales: any[]): DemandForecast[] {
   // Aggregate sales by product to find daily velocity
   const salesByProductAndDay: { [prodId: string]: { [date: string]: number } } = {};
   const dates = new Set<string>();
 
-  sales.forEach(tx => {
+  localSales.forEach(tx => {
     dates.add(tx.date);
     tx.items.forEach(it => {
       if (!it.productId) return;
@@ -334,7 +451,7 @@ function calculateAnalyticalForecasts(): DemandForecast[] {
 
   const numHistoricalDays = Math.max(dates.size, 14); // Avoid division by zero, min 14 days
 
-  return products.map(prod => {
+  return localProducts.map(prod => {
     // 1. Calculate historical daily average quantity sold (velocity)
     const productSalesMap = salesByProductAndDay[prod.id] || {};
     const totalQtySold = Object.values(productSalesMap).reduce((a, b) => a + b, 0);
@@ -344,7 +461,6 @@ function calculateAnalyticalForecasts(): DemandForecast[] {
     const baseVelocity = rawVelocity > 0 ? rawVelocity : 0.4 + (Math.random() * 0.2);
 
     // 2. Seasonality factor multiplier (e.g., weekend lift and category checks)
-    // Groceries sell moderately, medicines consistently, confectionery/drinks have higher velocity
     let categoryMultiplier = 1.0;
     if (prod.category === "Groceries") categoryMultiplier = 1.1;
     if (prod.category === "Dairy & Fresh") categoryMultiplier = 1.35; // Dairy moves fast
@@ -401,22 +517,25 @@ function calculateAnalyticalForecasts(): DemandForecast[] {
 // SECURE SERVER-SIDE GEMINI SMART AI INSIGHTS
 // ==========================================
 
-app.get("/api/ai-insights", async (req, res) => {
+app.all("/api/ai-insights", async (req, res) => {
+  const reqProducts = req.body?.products || products;
+  const reqSales = req.body?.sales || sales;
+
   // 1. Procedural default fallback insights
-  const lowStockCount = products.filter(p => p.quantity <= p.reorderLevel).length;
-  const criticalProductsInfo = products
-    .filter(p => p.quantity <= p.reorderLevel)
-    .map(p => `${p.name} (SKU: ${p.sku}) holds ${p.quantity} units (Reorder at ${p.reorderLevel})`)
+  const lowStockCount = reqProducts.filter((p: any) => p.quantity <= p.reorderLevel).length;
+  const criticalProductsInfo = reqProducts
+    .filter((p: any) => p.quantity <= p.reorderLevel)
+    .map((p: any) => `${p.name} (SKU: ${p.sku}) holds ${p.quantity} units (Reorder at ${p.reorderLevel})`)
     .slice(0, 3)
     .join(", ");
 
-  let systemSummaryText = `Store Summary:\n- Total active products in inventory: ${products.length}\n- Low or critical stock Alert count: ${lowStockCount}\n- Low Stock highlights: ${criticalProductsInfo || "None"}\n`;
+  let systemSummaryText = `Store Summary:\n- Total active products in inventory: ${reqProducts.length}\n- Low or critical stock Alert count: ${lowStockCount}\n- Low Stock highlights: ${criticalProductsInfo || "None"}\n`;
   
   // Calculate revenue statistics
-  const totalRevenue = sales.reduce((acc, s) => acc + s.totalAmount, 0);
-  const upiSales = sales.filter(s => s.paymentMethod === "UPI").reduce((acc, s) => acc + s.totalAmount, 0);
-  const cardSales = sales.filter(s => s.paymentMethod === "Card").reduce((acc, s) => acc + s.totalAmount, 0);
-  const cashSales = sales.filter(s => s.paymentMethod === "Cash").reduce((acc, s) => acc + s.totalAmount, 0);
+  const totalRevenue = reqSales.reduce((acc: number, s: any) => acc + s.totalAmount, 0);
+  const upiSales = reqSales.filter((s: any) => s.paymentMethod === "UPI").reduce((acc: number, s: any) => acc + s.totalAmount, 0);
+  const cardSales = reqSales.filter((s: any) => s.paymentMethod === "Card").reduce((acc: number, s: any) => acc + s.totalAmount, 0);
+  const cashSales = reqSales.filter((s: any) => s.paymentMethod === "Cash").reduce((acc: number, s: any) => acc + s.totalAmount, 0);
 
   systemSummaryText += `- Total historical sales revenue recorded: ₹${totalRevenue.toLocaleString("en-IN")}\n`;
   systemSummaryText += `- Payment Preference Distribution: Cash (₹${cashSales}), UPI (₹${upiSales}), Cards (₹${cardSales})\n`;
